@@ -91,7 +91,7 @@ static void echo_server_worker(struct work_struct *work)
             }
             break;
         }
-        buf[res - 1] = '\0';
+        buf[res] = '\0';
 
         res = send_request(worker->sock, buf, res);
         if (res < 0) {
