@@ -32,10 +32,14 @@ static int get_request(struct socket *sock, unsigned char *buf, size_t size)
      * TODO: during benchmarking, such printk() is useless and lead to worse
      * result. Add a specific build flag for these printk() would be good.
      */
+#ifndef BENCH
     printk(MODULE_NAME ": start get response\n");
+#endif
     /* get msg */
     length = kernel_recvmsg(sock, &msg, &vec, size, size, msg.msg_flags);
+#ifndef BENCH
     printk(MODULE_NAME ": get request = %s\n", buf);
+#endif
 
     return length;
 }
@@ -53,13 +57,17 @@ static int send_request(struct socket *sock, unsigned char *buf, size_t size)
     msg.msg_flags = 0;
 
     vec.iov_base = buf;
-    vec.iov_len = strlen(buf);
+    vec.iov_len = size;
 
+#ifndef BENCH
     printk(MODULE_NAME ": start send request.\n");
+#endif
 
     length = kernel_sendmsg(sock, &msg, &vec, 1, size);
 
+#ifndef BENCH
     printk(MODULE_NAME ": send request = %s\n", buf);
+#endif
 
     return length;
 }
@@ -69,7 +77,7 @@ static void echo_server_worker(struct work_struct *work)
     struct kecho *worker = container_of(work, struct kecho, kecho_work);
     unsigned char *buf;
 
-    buf = kzalloc(BUF_SIZE, GFP_KERNEL);
+    buf = kmalloc(BUF_SIZE, GFP_KERNEL);
     if (!buf) {
         printk(KERN_ERR MODULE_NAME ": kmalloc error....\n");
         return;
@@ -83,6 +91,7 @@ static void echo_server_worker(struct work_struct *work)
             }
             break;
         }
+        buf[res - 1] = '\0';
 
         res = send_request(worker->sock, buf, res);
         if (res < 0) {
@@ -90,7 +99,6 @@ static void echo_server_worker(struct work_struct *work)
             break;
         }
 
-        memset(buf, 0, res);
     }
 
     kernel_sock_shutdown(worker->sock, SHUT_RDWR);
